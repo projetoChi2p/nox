@@ -32,6 +32,7 @@ module execute
   input   pc_t              lsu_pc_i,
   // IRQs
   input   s_irq_t           irq_i,
+  input   logic             rf_attempt_to_write_i,
   // To FETCH stg
   output  logic             fetch_req_o,
   output  pc_t              fetch_addr_o,
@@ -55,6 +56,7 @@ module execute
   s_trap_info_t trap_out;
   logic         will_jump_next_clk;
   logic         eval_trap;
+  logic         failed_to_register;
   s_trap_info_t instr_addr_misaligned;
 
   function automatic branch_dec(branch_t op, rdata_t rs1, rdata_t rs2);
@@ -71,6 +73,14 @@ module execute
     return take_branch;
   endfunction
 
+  always_comb begin : failed_to_register_check
+    if (rf_attempt_to_write_i && !ex_mem_wb_o.we_rd && ex_mem_wb_o.rd_addr != 'h0) begin
+      failed_to_register = 'b1;
+    end
+    else begin
+      failed_to_register = 'b0;
+    end
+  end
   always_comb begin : fwd_mux
     rs1_fwd = NO_FWD;
     rs2_fwd = NO_FWD;
@@ -208,10 +218,10 @@ module execute
       fetch_addr_o = trap_out.pc_addr;
     end
 
-    eval_trap = id_ready_o &&
-                id_valid_i &&
-                ~fetch_req_o &&
-                (lsu_o.op_typ == NO_LSU);
+  eval_trap = id_ready_o &&
+      id_valid_i &&
+      ~fetch_req_o &&
+      (lsu_o.op_typ == NO_LSU);
   end : fetch_req
 
   `CLK_PROC(clk, rst) begin
@@ -251,6 +261,7 @@ module execute
     .mret_i             (id_ex_i.mret),
     .wfi_i              (id_ex_i.wfi),
     .lsu_trap_i         (lsu_trap_i),
+    .failed_to_register_i(failed_to_register),
     .trap_o             (trap_out)
   );
 endmodule

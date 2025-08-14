@@ -34,6 +34,7 @@ module csr
   input                     mret_i,
   input                     wfi_i,
   input   s_trap_lsu_info_t lsu_trap_i,
+  input                     failed_to_register_i,
   output  s_trap_info_t     trap_o
 );
   typedef struct packed {
@@ -326,7 +327,9 @@ module csr
         default:        trap_offset = 'h0;
       endcase
     end
-
+    if (!failed_to_register_i && trap_o.active && (irq_i.sw_irq || irq_i.timer_irq || irq_i.ext_irq) && (~traps_can_happen_wo_exec)) begin
+      next_mepc = pc_addr_i;
+    end
     if (next_trap.active && ~mret_i) begin
       // bkp mstatus[MIE]
       //To support nested traps, each privilege mode x has a two-level stack of interrupt-enable bits and privilege modes.
@@ -337,7 +340,7 @@ module csr
       next_mstatus[`RV_MST_MPIE] = csr_mstatus_ff[`RV_MST_MIE];
       next_mstatus[`RV_MST_MIE]  = 'b0;
       if (wfi_i && (|irq_vec)) begin
-        // In this case, ISA says:
+        // In this case, ISA says: 
         //...If an enabled interrupt is present or later becomes present while the hart is stalled, the interrupt exception
         //will be taken on the following instruction, i.e., execution resumes in the trap handler and mepc = pc + 4.
         next_mepc = next_mepc + 'd4;

@@ -54,6 +54,7 @@ module nox
   rdata_t           rs2_data;
   valid_t           id_valid;
   ready_t           id_ready;
+  logic             rf_attempt_to_write;
   s_ex_mem_wb_t     ex_mem_wb;
   s_lsu_op_t        lsu_op;
   logic             lsu_bp;
@@ -168,7 +169,8 @@ module nox
     .rs1_data_o            (rs1_data),
     .rs2_data_o            (rs2_data),
     .id_valid_o            (id_valid),
-    .id_ready_i            (id_ready)
+  .id_ready_i            (id_ready),
+  .rf_attempt_to_write_o  (rf_attempt_to_write)
   );
 
   execute #(
@@ -194,7 +196,8 @@ module nox
     .lsu_bp_i              (lsu_bp),
     .lsu_pc_i              (lsu_pc),
     // IRQs
-    .irq_i                 (irq_i),
+  .irq_i                 (irq_i),
+  .rf_attempt_to_write_i  (rf_attempt_to_write),
     // To FETCH stg
     .fetch_req_o           (fetch_req),
     .fetch_addr_o          (fetch_addr),
